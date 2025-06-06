@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Location Finder</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --accent-color: #4895ef;
+            --dark-color: #2b2d42;
+            --light-color: #f8f9fa;
+            --success-color: #4cc9f0;
+            --warning-color: #f8961e;
+            --danger-color: #f94144;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--light-color);
+            color: var(--dark-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header Styles */
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
+            transform: rotate(30deg);
+            z-index: 1;
+        }
+
+        header .container {
+            position: relative;
+            z-index: 2;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        /* Main Content Styles */
+        .main-content {
+            padding: 3rem 0;
+        }
+
+        .location-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto 3rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .location-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 5px;
+            height: 100%;
+            background: linear-gradient(to bottom, var(--primary-color), var(--accent-color));
+        }
+
+        .location-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .location-card h2 {
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .location-card h2 i {
+            font-size: 1.5rem;
+        }
+
+        .location-info {
+            margin: 1.5rem 0;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .info-item {
+            background: rgba(67, 97, 238, 0.05);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .info-item h3 {
+            font-size: 0.9rem;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .info-item p {
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        #map {
+            height: 350px;
+            width: 100%;
+            border-radius: 10px;
+            margin: 1.5rem 0;
+            border: 1px solid #e1e5eb;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 0.8rem 1.8rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
+            background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn i {
+            font-size: 1rem;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #f5f7fa, #e4e8f0);
+            color: var(--primary-color);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, #e4e8f0, #f5f7fa);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success-color), #3a86ff);
+        }
+
+        .btn-success:hover {
+            background: linear-gradient(135deg, #3a86ff, var(--success-color));
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, var(--warning-color), #f3722c);
+        }
+
+        .btn-warning:hover {
+            background: linear-gradient(135deg, #f3722c, var(--warning-color));
+        }
+
+        /* History Section */
+        .history-section {
+            margin-top: 2rem;
+            display: none;
+        }
+
+        .history-list {
+            margin-top: 1rem;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 8px;
+        }
+
+        .history-item {
+            padding: 0.8rem 1rem;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .history-item .time {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        /* Weather Section */
+        .weather-info {
+            display: none;
+            margin-top: 1.5rem;
+            background: rgba(72, 149, 239, 0.1);
+            padding: 1.5rem;
+            border-radius: 10px;
+        }
+
+        .weather-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .weather-icon {
+            font-size: 2rem;
+            margin-right: 1rem;
+            color: var(--accent-color);
+        }
+
+        .weather-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .weather-detail {
+            background: rgba(255,255,255,0.7);
+            padding: 0.8rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        /* Share Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .share-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .share-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .share-btn:hover {
+            background: #f8f9fa;
+            transform: translateY(-3px);
+        }
+
+        .share-btn i {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Loader */
+        .loader {
+            display: none;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 2rem auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Error Message */
+        .error-message {
+            color: var(--danger-color);
+            margin: 1rem 0;
+            display: none;
+            padding: 1rem;
+            background: rgba(249, 65, 68, 0.1);
+            border-radius: 8px;
+            border-left: 3px solid var(--danger-color);
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 2rem;
+            }
+
+            .location-card {
+                padding: 1.5rem;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1><i class="fas fa-map-marker-alt"></i> Advanced Location Finder</h1>
+            <p>Discover your precise location with additional contextual information</p>
+        </div>
+    </header>
+
+    <div class="main-content">
+        <div class="container">
+            <div class="location-card">
+                <h2><i class="fas fa-location-arrow"></i> Your Current Location</h2>
+                <p>Click the button below to detect your current location with advanced features</p>
+                
+                <div class="loader" id="loader"></div>
+                <div class="error-message" id="error-message"></div>
+                
+                <button class="btn" id="detect-location">
+                    <i class="fas fa-crosshairs"></i> Detect My Location
+                </button>
+                
+                <div class="location-info" id="location-info" style="display: none;">
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <h3>Latitude</h3>
+                            <p id="latitude"></p>
+                        </div>
+                        <div class="info-item">
+                            <h3>Longitude</h3>
+                            <p id="longitude"></p>
+                        </div>
+                        <div class="info-item">
+                            <h3>Accuracy</h3>
+                            <p id="accuracy"></p>
+                        </div>
+                        <div class="info-item">
+                            <h3>Altitude</h3>
+                            <p id="altitude"></p>
+                        </div>
+                    </div>
+                    
+                    <div id="map"></div>
+                    
+                    <div class="weather-info" id="weather-info">
+                        <div class="weather-header">
+                            <i class="fas fa-cloud-sun weather-icon"></i>
+                            <h3>Current Weather</h3>
+                        </div>
+                        <div class="weather-details" id="weather-details">
+                            <!-- Weather data will be inserted here -->
+                        </div>
+                    </div>
+                    
+                    <div class="history-section" id="history-section">
+                        <h3><i class="fas fa-history"></i> Location History</h3>
+                        <div class="history-list" id="history-list">
+                            <!-- History items will be added here -->
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="btn btn-success" id="save-location">
+                            <i class="fas fa-save"></i> Save Location
+                        </button>
+                        <button class="btn btn-warning" id="share-location">
+                            <i class="fas fa-share-alt"></i> Share
+                        </button>
+                        <a href="/index.ejs" class="btn btn-secondary">
+                            <i class="fas fa-arrow-right"></i> Professional Services
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div class="modal" id="share-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Share Your Location</h3>
+                <button class="close-modal" id="close-modal">&times;</button>
+            </div>
+            <p>Choose how you want to share your current location:</p>
+            <div class="share-options">
+                <div class="share-btn" id="copy-link">
+                    <i class="fas fa-copy"></i>
+                    <span>Copy Link</span>
+                </div>
+                <div class="share-btn" id="share-email">
+                    <i class="fas fa-envelope"></i>
+                    <span>Email</span>
+                </div>
+                <div class="share-btn" id="share-sms">
+                    <i class="fas fa-sms"></i>
+                    <span>SMS</span>
+                </div>
+                <div class="share-btn" id="share-whatsapp">
+                    <i class="fab fa-whatsapp"></i>
+                    <span>WhatsApp</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const detectBtn = document.getElementById('detect-location');
+            const locationInfo = document.getElementById('location-info');
+            const loader = document.getElementById('loader');
+            const errorMessage = document.getElementById('error-message');
+            const saveBtn = document.getElementById('save-location');
+            const shareBtn = document.getElementById('share-location');
+            const shareModal = document.getElementById('share-modal');
+            const closeModal = document.getElementById('close-modal');
+            const historySection = document.getElementById('history-section');
+            const historyList = document.getElementById('history-list');
+            const weatherInfo = document.getElementById('weather-info');
+            const weatherDetails = document.getElementById('weather-details');
+            
+            let map;
+            let marker;
+            let currentPosition = null;
+            const locationHistory = JSON.parse(localStorage.getItem('locationHistory')) || [];
+            
+            // Initialize with any saved history
+            if (locationHistory.length > 0) {
+                renderHistory();
+                historySection.style.display = 'block';
+            }
+            
+            // Detect Location Button
+            detectBtn.addEventListener('click', detectLocation);
+            
+            // Save Location Button
+            saveBtn.addEventListener('click', saveLocation);
+            
+            // Share Location Button
+            shareBtn.addEventListener('click', () => {
+                shareModal.style.display = 'flex';
+            });
+            
+            // Close Modal Button
+            closeModal.addEventListener('click', () => {
+                shareModal.style.display = 'none';
+            });
+            
+            // Share Options
+            document.getElementById('copy-link').addEventListener('click', copyLocationLink);
+            document.getElementById('share-email').addEventListener('click', () => shareVia('email'));
+            document.getElementById('share-sms').addEventListener('click', () => shareVia('sms'));
+            document.getElementById('share-whatsapp').addEventListener('click', () => shareVia('whatsapp'));
+            
+            // Close modal when clicking outside
+            window.addEventListener('click', (e) => {
+                if (e.target === shareModal) {
+                    shareModal.style.display = 'none';
+                }
+            });
+            
+            function detectLocation() {
+                loader.style.display = 'block';
+                errorMessage.style.display = 'none';
+                detectBtn.disabled = true;
+                
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            currentPosition = position;
+                            const { latitude, longitude, accuracy, altitude } = position.coords;
+                            
+                            // Display basic info
+                            document.getElementById('latitude').textContent = latitude.toFixed(6);
+                            document.getElementById('longitude').textContent = longitude.toFixed(6);
+                            document.getElementById('accuracy').textContent = `${accuracy} meters`;
+                            document.getElementById('altitude').textContent = altitude ? `${altitude.toFixed(2)} meters` : 'Not available';
+                            
+                            // Initialize or update map
+                            initMap(latitude, longitude);
+                            
+                            // Get additional information
+                            getAddress(latitude, longitude);
+                            getWeather(latitude, longitude);
+                            
+                            // Show the location info
+                            loader.style.display = 'none';
+                            locationInfo.style.display = 'block';
+                            detectBtn.disabled = false;
+                        },
+                        (error) => {
+                            handleGeolocationError(error);
+                        },
+                        {
+                            enableHighAccuracy: true,
+                            timeout: 10000,
+                            maximumAge: 0
+                        }
+                    );
+                } else {
+                    errorMessage.textContent = "Geolocation is not supported by your browser.";
+                    errorMessage.style.display = 'block';
+                    loader.style.display = 'none';
+                    detectBtn.disabled = false;
+                }
+            }
+            
+            function initMap(lat, lng) {
+                if (!map) {
+                    map = L.map('map').setView([lat, lng], 15);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    }).addTo(map);
+                    
+                    // Add click event to map
+                    map.on('click', (e) => {
+                        const { lat, lng } = e.latlng;
+                        currentPosition = {
+                            coords: {
+                                latitude: lat,
+                                longitude: lng,
+                                accuracy: 50 // Approximate accuracy for manual selection
+                            }
+                        };
+                        updateLocationInfo(lat, lng, 50);
+                        getAddress(lat, lng);
+                        getWeather(lat, lng);
+                    });
+                } else {
+                    map.setView([lat, lng], 15);
+                }
+                
+                // Add or update marker
+                if (marker) {
+                    marker.setLatLng([lat, lng]);
+                } else {
+                    marker = L.marker([lat, lng]).addTo(map)
+                        .bindPopup('You are here!')
+                        .openPopup();
+                }
+            }
+            
+            function updateLocationInfo(lat, lng, accuracy) {
+                document.getElementById('latitude').textContent = lat.toFixed(6);
+                document.getElementById('longitude').textContent = lng.toFixed(6);
+                document.getElementById('accuracy').textContent = `${accuracy} meters`;
+            }
+            
+            function getAddress(lat, lng) {
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`)
+                    .then(response => response.json())
+                    .then(data => {
+                        let address = '';
+                        if (data.address) {
+                            const addr = data.address;
+                            if (addr.road) address += addr.road + ', ';
+                            if (addr.neighbourhood) address += addr.neighbourhood + ', ';
+                            if (addr.suburb) address += addr.suburb + ', ';
+                            if (addr.city) address += addr.city + ', ';
+                            if (addr.state) address += addr.state + ', ';
+                            if (addr.country) address += addr.country;
+                            
+                            address = address.replace(/, $/, '');
+                        }
+                        
+                        if (address) {
+                            // You can display the address in your UI as needed
+                            console.log('Address:', address);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error getting address:', error);
+                    });
+            }
+            
+            function getWeather(lat, lng) {
+                // Note: In a real app, you would use a weather API with your API key
+                // This is a mock implementation for demonstration
+                const mockWeather = {
+                    temp: (Math.random() * 30 + 10).toFixed(1),
+                    humidity: (Math.random() * 50 + 30).toFixed(0),
+                    wind: (Math.random() * 20).toFixed(1),
+                    conditions: ['Sunny', 'Partly Cloudy', 'Cloudy', 'Rainy'][Math.floor(Math.random() * 4)],
+                    icon: 'fa-cloud-sun'
+                };
+                
+                weatherDetails.innerHTML = `
+                    <div class="weather-detail">
+                        <h4>Temperature</h4>
+                        <p>${mockWeather.temp}°C</p>
+                    </div>
+                    <div class="weather-detail">
+                        <h4>Conditions</h4>
+                        <p>${mockWeather.conditions}</p>
+                    </div>
+                    <div class="weather-detail">
+                        <h4>Humidity</h4>
+                        <p>${mockWeather.humidity}%</p>
+                    </div>
+                    <div class="weather-detail">
+                        <h4>Wind</h4>
+                        <p>${mockWeather.wind} km/h</p>
+                    </div>
+                `;
+                
+                document.querySelector('.weather-icon').className = `fas ${mockWeather.icon} weather-icon`;
+                weatherInfo.style.display = 'block';
+            }
+            
+            function saveLocation() {
+                if (!currentPosition) return;
+                
+                const { latitude, longitude, accuracy } = currentPosition.coords;
+                const timestamp = new Date().toLocaleString();
+                
+                const locationData = {
+                    lat: latitude,
+                    lng: longitude,
+                    accuracy,
+                    timestamp
+                };
+                
+                locationHistory.unshift(locationData);
+                if (locationHistory.length > 5) {
+                    locationHistory.pop();
+                }
+                
+                localStorage.setItem('locationHistory', JSON.stringify(locationHistory));
+                renderHistory();
+                historySection.style.display = 'block';
+                
+                // Show confirmation
+                alert('Location saved successfully!');
+            }
+            
+            function renderHistory() {
+                historyList.innerHTML = locationHistory.map(loc => `
+                    <div class="history-item">
+                        <div>
+                            <strong>${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}</strong>
+                            <div>Accuracy: ${loc.accuracy.toFixed(0)}m</div>
+                        </div>
+                        <div class="time">${loc.timestamp}</div>
+                    </div>
+                `).join('');
+            }
+            
+            function copyLocationLink() {
+                if (!currentPosition) return;
+                
+                const { latitude, longitude } = currentPosition.coords;
+                const link = `https://www.google.com/maps?q=${latitude},${longitude}`;
+                
+                navigator.clipboard.writeText(link)
+                    .then(() => {
+                        alert('Link copied to clipboard!');
+                        shareModal.style.display = 'none';
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy: ', err);
+                        alert('Failed to copy link');
+                    });
+            }
+            
+            function shareVia(method) {
+                if (!currentPosition) return;
+                
+                const { latitude, longitude } = currentPosition.coords;
+                const text = `My current location: https://www.google.com/maps?q=${latitude},${longitude}`;
+                
+                switch(method) {
+                    case 'email':
+                        window.location.href = `mailto:?subject=My Current Location&body=${encodeURIComponent(text)}`;
+                        break;
+                    case 'sms':
+                        window.location.href = `sms:?body=${encodeURIComponent(text)}`;
+                        break;
+                    case 'whatsapp':
+                        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+                        break;
+                }
+                
+                shareModal.style.display = 'none';
+            }
+            
+            function handleGeolocationError(error) {
+                loader.style.display = 'none';
+                detectBtn.disabled = false;
+                
+                let errorMsg = "Error getting your location: ";
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMsg += "You denied the request for geolocation.";
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMsg += "Location information is unavailable.";
+                        break;
+                    case error.TIMEOUT:
+                        errorMsg += "The request to get location timed out.";
+                        break;
+                    case error.UNKNOWN_ERROR:
+                        errorMsg += "An unknown error occurred.";
+                        break;
+                }
+                
+                errorMessage.textContent = errorMsg;
+                errorMessage.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
